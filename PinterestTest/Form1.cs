@@ -2,30 +2,31 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Windows.Forms;
 
 namespace PinterestTest
 {
 	public partial class Form1 : Form
 	{
-		private string AccessToken = "<ACCESS TOKEN HERE>";
-		private string appID = "<APP ID HERE>";
-		private string appSecret = "<APP SECRET HERE>";
+		private string AccessToken = "MTQ2NTkyMzo0NDQ1ODk5MzE4NzI5MjgwODQ6NDAyNjUzNDMyfDE2MTMyMjg0NTM6MC0tMjZmM2EzNWI5ZDcwNTFiNmExZWI5YzliYzE3ODgwMzc=";
+		private string appID = "1465923";
+		private string appSecret = "f955bcf0cb2b00f9184cf4d83d9000cea71b6f4e";
 		private PinterestService service;
 		private PinterestUser user;
-		private string imageURL = "<URL TO IMAGE HERE>";
-		
+		private string imageURL = "http://calendarsystems.info/DigitalUpload/Images/ThumbnailImages/0000dd59-2bdf-46b6-8934-efddfff36ab1.jpg";
+
 		public Form1()
 		{
 			InitializeComponent();
 			service = new PinterestService(appID, appSecret, AccessToken);
+			service.OnPinterestException += Service_OnPinterestException;
+			service.OnPinterestUnauthorized += Service_OnPinterestUnauthorized;
 		}
 
 		private void btnGetUser_Click(object sender, EventArgs e)
 		{
 			try
-			{				
+			{
 				user = service.getUser();
 
 				if (user != null)
@@ -34,9 +35,9 @@ namespace PinterestTest
 					btnGetBoards.Enabled = true;
 					btnGetPins.Enabled = true;
 					lblUserID.Text = "Id: " + user.Id;
-					lblFirstName.Text = "First Name: " + user.FirstName;
-					lblLastName.Text = "Last Name: " + user.LastName;
-					lblURL.Text = "URL: " + user.URL;
+					lblFirstName.Text = "Full Name: " + user.FullName;
+					//lblLastName.Text = "Last Name: " + user.LastName;
+					lblURL.Text = "URL: " + user.ProfileURL;
 				}
 				else
 				{
@@ -115,7 +116,7 @@ namespace PinterestTest
 		{
 			try
 			{
-				List<Board> boards = service.getBoards();
+				List<Board> boards = service.getBoardsForUser(user.Id);
 				lblBoardCount.Text = "Board Count: " + boards.Count;
 				lbBoards.DisplayMember = "Name";
 				lbBoards.ValueMember = "Id";
@@ -161,7 +162,7 @@ namespace PinterestTest
 			try
 			{
 				string selectedValue = lbPins.SelectedValue.ToString();
-				bool ret = service.deletePin(selectedValue);				
+				bool ret = service.deletePin(selectedValue);
 				if (ret)
 				{
 					btnDeletePin.Enabled = false;
@@ -181,7 +182,7 @@ namespace PinterestTest
 				string boardID = lbBoards.SelectedValue.ToString();
 				Pin pin = service.createPin(boardID, "TEST NOTE", imageURL, imageURL);
 				if (pin != null)
-					this.getPins();
+					getPins();
 			}
 			catch (Exception E)
 			{
@@ -195,7 +196,7 @@ namespace PinterestTest
 			{
 				Board board = service.createBoard("TEST_BOARD", "description");
 				if (board != null)
-					this.getBoards();
+					getBoards();
 			}
 			catch (Exception E)
 			{
@@ -218,6 +219,41 @@ namespace PinterestTest
 			{
 				Debug.WriteLine("Exception in Form1.btnDeleteBoard_Click(): " + E.Message);
 			}
+		}
+
+		private void button1_Click(object sender, EventArgs e)
+		{
+			try
+			{
+				service.OnPinterestException -= Service_OnPinterestException;
+				service.OnPinterestUnauthorized -= Service_OnPinterestUnauthorized;
+				service = null;
+
+				service = new PinterestService(appID, appSecret);
+				service.OnPinterestException += Service_OnPinterestException;
+				service.OnPinterestUnauthorized += Service_OnPinterestUnauthorized;
+
+				OAuthAccessToken accessToken = service.GetAccessToken(tboAuthToken.Text, tboAuthIdentifier.Text, "");
+			}
+			catch (Exception E)
+			{
+				Debug.WriteLine("Exception in Form1.btnGetAccessToken(): " + E.Message);
+			}
+			finally
+			{
+				service.OnPinterestException -= Service_OnPinterestException;
+				service.OnPinterestUnauthorized -= Service_OnPinterestUnauthorized;
+			}
+		}
+
+		private void Service_OnPinterestUnauthorized()
+		{
+
+		}
+
+		private void Service_OnPinterestException(PinterestService.PinterestException ex)
+		{
+			Debug.WriteLine("Exception in Pinterest Service: " + ex.Message);
 		}
 	}
 }
