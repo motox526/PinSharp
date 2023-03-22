@@ -1,7 +1,4 @@
-﻿using System;
-using System.Linq;
-
-/*Copyright © 2016, Chris Butterfield Software Solutions, LLC
+﻿/*Copyright © 2023, Chris Butterfield Software Solutions, LLC
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -34,16 +31,10 @@ namespace PinSharp
 {
 	public class PinterestUser
 	{
-		public string FirstName { get; set; }
-		public string LastName { get; set; }
 		public string Id { get; set; }
-		public string URL { get; set; }
-		public string FullName
-		{
-			get
-			{
-				return (this.FirstName + " " + this.LastName).Trim();
-			}
-		}
+		public string ProfileURL { get; set; }
+		public string FullName { get; set; }
+		public string ImageURL { get; set; }
+		public string Username { get; set; }
 	}
 }

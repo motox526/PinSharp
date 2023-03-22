@@ -5,10 +5,9 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Net;
 
-/*Copyright © 2016, Chris Butterfield Software Solutions, LLC
+/*Copyright © 2023, Chris Butterfield Software Solutions, LLC
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -48,6 +47,29 @@ namespace PinSharp
 		//private readonly RestClient _client;
 		#endregion
 
+		public delegate void PinterestExceptionDelegate(PinterestException ex);
+		public delegate void PinterestUnauthorizedDelegate();
+		public delegate void PinterestMessageDelegate(string message);
+
+		public class PinterestException : Exception
+		{
+			public PinterestException(string message)
+			: base(message)
+			{ }
+		}
+
+		/// <summary>
+		/// Notifies subscribers of a Pinterest Exception
+		/// </summary>
+		public event PinterestExceptionDelegate OnPinterestException = null;
+
+		public event PinterestUnauthorizedDelegate OnPinterestUnauthorized = null;
+
+		/// <summary>
+		/// Notifies subscribers of a pinterest message
+		/// </summary>
+		public event PinterestMessageDelegate OnPinterestMessage = null;
+
 		#region Constructors
 		/// <summary>
 		/// Creates a new instance of a PinterestService
@@ -56,10 +78,10 @@ namespace PinSharp
 		/// <param name="appSecret">The App Secret</param>
 		public PinterestService(string appID, string appSecret)
 			: this()
-        {
+		{
 			_appID = appID;
 			_appSecret = appSecret;
-        }
+		}
 
 		/// <summary>
 		/// Creates a new instance of a PinterestService
@@ -83,12 +105,15 @@ namespace PinSharp
 				Authority = Globals.PinterestBaseURL,
 				UserAgent = "PinSharp",
 				DecompressionMethods = DecompressionMethods.GZip,
-				GetErrorResponseEntityType = (request, @base) => typeof(TwitterError),
+				GetErrorResponseEntityType = (request, @base) => typeof(PinterestError),
 			};
 		}
 		#endregion
 
 		#region Getters/Setters
+		/// <summary>
+		/// Gets or sets the Response object
+		/// </summary>
 		public virtual PinterestResponse Response { get; private set; }
 		#endregion
 
@@ -101,14 +126,14 @@ namespace PinSharp
 					Credentials = new OAuthCredentials
 					{
 						ConsumerKey = args.AppID,
-						ConsumerSecret = args.AppSecret,						
-						Token = args.Token,						
+						ConsumerSecret = args.AppSecret,
+						Token = args.Token,
 						ParameterHandling = OAuthParameterHandling.HttpAuthorizationHeader,
 						SignatureMethod = OAuthSignatureMethod.HmacSha1,
 						Type = OAuthType.AccessToken
 					},
 					Method = WebMethod.Get,
-					Path = "/v1/" + args.Username + "/"
+					Path = "/" + Globals.PinterestAPIVersion + "/users/" + args.Username + "/"
 				};
 				return request;
 			};
@@ -128,7 +153,7 @@ namespace PinSharp
 						Type = OAuthType.AccessToken
 					},
 					Method = WebMethod.Get,
-					Path = "/v1/me/pins/" + (String.IsNullOrEmpty(args.ObjectID) ? "" : (args.ObjectID + "/"))
+					Path = "/" + Globals.PinterestAPIVersion + "/users/me/pins/" + (string.IsNullOrEmpty(args.ObjectID) ? "" : (args.ObjectID + "/"))
 				};
 				return request;
 			};
@@ -148,7 +173,7 @@ namespace PinSharp
 						Type = OAuthType.AccessToken
 					},
 					Method = WebMethod.Get,
-					Path = "/v1/me/boards/"
+					Path = "/" + Globals.PinterestAPIVersion + "/users/" + args.UserID + "/boards/feed/"
 				};
 				return request;
 			};
@@ -168,7 +193,7 @@ namespace PinSharp
 						Type = OAuthType.AccessToken
 					},
 					Method = WebMethod.Post,
-					Path = "/v1/boards/"
+					Path = "/" + Globals.PinterestAPIVersion + "/boards/"
 				};
 				return request;
 			};
@@ -188,7 +213,7 @@ namespace PinSharp
 						Type = OAuthType.AccessToken
 					},
 					Method = WebMethod.Get,
-					Path = "/v1/pins/" + args.ObjectID + "/"
+					Path = "/" + Globals.PinterestAPIVersion + "/pins/" + args.ObjectID + "/"
 				};
 				return request;
 			};
@@ -207,8 +232,8 @@ namespace PinSharp
 						SignatureMethod = OAuthSignatureMethod.HmacSha1,
 						Type = OAuthType.AccessToken
 					},
-					Method = WebMethod.Post,
-					Path = "/v1/pins/"
+					Method = WebMethod.Put,
+					Path = "/" + Globals.PinterestAPIVersion + "/pins/"
 				};
 				return request;
 			};
@@ -228,7 +253,7 @@ namespace PinSharp
 						Type = OAuthType.AccessToken
 					},
 					Method = WebMethod.Delete,
-					Path = "/v1/pins/" + args.ObjectID + "/"
+					Path = "/" + Globals.PinterestAPIVersion + "/pins/" + args.ObjectID + "/"
 				};
 				return request;
 			};
@@ -248,7 +273,7 @@ namespace PinSharp
 						Type = OAuthType.AccessToken
 					},
 					Method = WebMethod.Get,
-					Path = "/v1/boards/" + args.ObjectID + "/"
+					Path = "/" + Globals.PinterestAPIVersion + "/boards/" + args.ObjectID + "/"
 				};
 				return request;
 			};
@@ -268,7 +293,7 @@ namespace PinSharp
 						Type = OAuthType.AccessToken
 					},
 					Method = WebMethod.Delete,
-					Path = "/v1/boards/" + args.ObjectID + "/"
+					Path = "/" + Globals.PinterestAPIVersion + "/boards/" + args.ObjectID + "/"
 				};
 				return request;
 			};
@@ -288,7 +313,7 @@ namespace PinSharp
 						Type = OAuthType.AccessToken
 					},
 					Method = WebMethod.Get,
-					Path = "/v1/boards/" + args.ObjectID + "/pins/" 
+					Path = "/" + Globals.PinterestAPIVersion + "/boards/" + args.ObjectID + "/pins/"
 				};
 				return request;
 			};
@@ -319,19 +344,20 @@ namespace PinSharp
 				{
 					AppID = _appID,
 					AppSecret = _appSecret,
-					Token = this._token,
+					Token = _token,
 					Username = usernameOrId
 				};
 
 				var request = _userQuery.Invoke(args);
-				request.AddParameter("access_token", this._token);
+				request.AddParameter("access_token", _token);
 
 				var response = _oauth.Request(request);
 
 				SetResponse(response);
 
-				if (response.StatusCode == System.Net.HttpStatusCode.OK)
+				if (response.StatusCode == HttpStatusCode.OK)
 				{
+					//RaiseException(new Exception(response.Content));
 					var query = JSON.JsonDecode(response.Content);
 					if ((query != null) && (query is Hashtable))
 					{
@@ -340,17 +366,23 @@ namespace PinSharp
 						{
 							user = new PinterestUser()
 							{
-								URL = ((Hashtable)table["data"])["url"].ToString(),
-								FirstName = ((Hashtable)table["data"])["first_name"].ToString(),
-								LastName = ((Hashtable)table["data"])["last_name"].ToString(),
+								ProfileURL = ((Hashtable)table["data"])["profile_url"].ToString(),
+								ImageURL = ((Hashtable)table["data"])["image_medium_url"].ToString(),
+								FullName = ((Hashtable)table["data"])["full_name"].ToString(),
+								Username = ((Hashtable)table["data"])["username"].ToString(),
 								Id = ((Hashtable)table["data"])["id"].ToString(),
 							};
 						}
 					}
 				}
+				else if (response.StatusCode == HttpStatusCode.Unauthorized)
+				{
+					OnPinterestUnauthorized?.Invoke();
+				}
 			}
 			catch (Exception e)
 			{
+				RaiseException(e);
 				Debug.WriteLine("Exception in PinterestService.getUser(): " + e.Message);
 			}
 
@@ -372,18 +404,18 @@ namespace PinSharp
 				{
 					AppID = _appID,
 					AppSecret = _appSecret,
-					Token = this._token,
+					Token = _token,
 					ObjectID = pinID
 				};
 
 				var request = _pinQuery.Invoke(args);
-				request.AddParameter("access_token", this._token);
+				request.AddParameter("access_token", _token);
 
 				var response = _oauth.Request(request);
 
 				SetResponse(response);
 
-				if (response.StatusCode == System.Net.HttpStatusCode.OK)
+				if (response.StatusCode == HttpStatusCode.OK)
 				{
 					var query = JSON.JsonDecode(response.Content);
 					if ((query != null) && (query is Hashtable))
@@ -392,18 +424,21 @@ namespace PinSharp
 						if (table.ContainsKey("data"))
 						{
 							Hashtable pinTable = (Hashtable)table["data"];
-							ret = this.pinFromHashTable(pinTable);
+							ret = pinFromHashTable(pinTable);
 						}
 					}
 				}
+				else
+					throw new Exception("Received invalid response from Pinterest.  Status code: " + response.StatusCode + " Content: " + response.Content);
 			}
 			catch (Exception e)
 			{
+				RaiseException(e);
 				Debug.WriteLine("Exception in PinterestService.getPin(): " + e.Message);
 			}
 
 			return ret;
-		}		
+		}
 
 		/// <summary>
 		/// Get all pins for the currently authenticated user
@@ -419,17 +454,17 @@ namespace PinSharp
 				{
 					AppID = _appID,
 					AppSecret = _appSecret,
-					Token = this._token
+					Token = _token
 				};
 
 				var request = _pinsQuery.Invoke(args);
-				request.AddParameter("access_token", this._token);
+				request.AddParameter("access_token", _token);
 
 				var response = _oauth.Request(request);
 
 				SetResponse(response);
 
-				if (response.StatusCode == System.Net.HttpStatusCode.OK)
+				if (response.StatusCode == HttpStatusCode.OK)
 				{
 					var query = JSON.JsonDecode(response.Content);
 					if ((query != null) && (query is Hashtable))
@@ -441,14 +476,17 @@ namespace PinSharp
 							for (int x = 0; x < pinTable.Count; x++)
 							{
 								Hashtable subTable = (Hashtable)pinTable[x];
-								ret.Add(this.pinFromHashTable(subTable));
+								ret.Add(pinFromHashTable(subTable));
 							}
 						}
 					}
 				}
+				else
+					throw new Exception("Received invalid response from Pinterest.  Status code: " + response.StatusCode + " Content: " + response.Content);
 			}
 			catch (Exception e)
 			{
+				RaiseException(e);
 				Debug.WriteLine("Exception in PinterestService.getPins(): " + e.Message);
 			}
 
@@ -470,18 +508,18 @@ namespace PinSharp
 				{
 					AppID = _appID,
 					AppSecret = _appSecret,
-					Token = this._token,
+					Token = _token,
 					ObjectID = boardID
 				};
 
 				var request = _boardPinsQuery.Invoke(args);
-				request.AddParameter("access_token", this._token);
+				request.AddParameter("access_token", _token);
 
 				var response = _oauth.Request(request);
 
 				SetResponse(response);
 
-				if (response.StatusCode == System.Net.HttpStatusCode.OK)
+				if (response.StatusCode == HttpStatusCode.OK)
 				{
 					var query = JSON.JsonDecode(response.Content);
 					if ((query != null) && (query is Hashtable))
@@ -493,14 +531,17 @@ namespace PinSharp
 							for (int x = 0; x < pinTable.Count; x++)
 							{
 								Hashtable subTable = (Hashtable)pinTable[x];
-								ret.Add(this.pinFromHashTable(subTable));
+								ret.Add(pinFromHashTable(subTable));
 							}
 						}
 					}
 				}
+				else
+					throw new Exception("Received invalid response from Pinterest.  Status code: " + response.StatusCode + " Content: " + response.Content);
 			}
 			catch (Exception e)
 			{
+				RaiseException(e);
 				Debug.WriteLine("Exception in PinterestService.getBoardPins(): " + e.Message);
 			}
 
@@ -511,7 +552,7 @@ namespace PinSharp
 		/// Gets a list of boards for the currently authenticated user
 		/// </summary>
 		/// <returns>A list of board objects</returns>
-		public List<Board> getBoards()
+		public List<Board> getBoardsForUser(string UserID)
 		{
 			List<Board> ret = new List<Board>();
 
@@ -521,18 +562,21 @@ namespace PinSharp
 				{
 					AppID = _appID,
 					AppSecret = _appSecret,
-					Token = this._token
+					Token = _token,
+					UserID = UserID
 				};
 
 				var request = _boardsQuery.Invoke(args);
-				request.AddParameter("access_token", this._token);
+				request.AddParameter("access_token", _token);
+				request.AddParameter("sort", "alphabetical");
 
 				var response = _oauth.Request(request);
 
 				SetResponse(response);
 
-				if (response.StatusCode == System.Net.HttpStatusCode.OK)
+				if (response.StatusCode == HttpStatusCode.OK)
 				{
+					RaiseMessage("Get Board Content: " + response.Content);
 					var query = JSON.JsonDecode(response.Content);
 					if ((query != null) && (query is Hashtable))
 					{
@@ -543,14 +587,17 @@ namespace PinSharp
 							for (int x = 0; x < boardTable.Count; x++)
 							{
 								Hashtable subTable = (Hashtable)boardTable[x];
-								ret.Add(this.boardFromHashTable(subTable));
+								ret.Add(boardFromHashTable(subTable));
 							}
 						}
 					}
 				}
+				else
+					throw new Exception("Received invalid response from Pinterest.  Status code: " + response.StatusCode + " Content: " + response.Content);
 			}
 			catch (Exception e)
 			{
+				RaiseException(e);
 				Debug.WriteLine("Exception in PinterestService.getBoards(): " + e.Message);
 			}
 
@@ -572,18 +619,18 @@ namespace PinSharp
 				{
 					AppID = _appID,
 					AppSecret = _appSecret,
-					Token = this._token,
+					Token = _token,
 					ObjectID = boardID
 				};
 
 				var request = _boardQuery.Invoke(args);
-				request.AddParameter("access_token", this._token);
+				request.AddParameter("access_token", _token);
 
 				var response = _oauth.Request(request);
 
 				SetResponse(response);
 
-				if (response.StatusCode == System.Net.HttpStatusCode.OK)
+				if (response.StatusCode == HttpStatusCode.OK)
 				{
 					var query = JSON.JsonDecode(response.Content);
 					if ((query != null) && (query is Hashtable))
@@ -592,18 +639,21 @@ namespace PinSharp
 						if (table.ContainsKey("data"))
 						{
 							Hashtable boardTable = (Hashtable)table["data"];
-							ret = this.boardFromHashTable(boardTable);
+							ret = boardFromHashTable(boardTable);
 						}
 					}
 				}
+				else
+					throw new Exception("Received invalid response from Pinterest.  Status code: " + response.StatusCode + " Content: " + response.Content);
 			}
 			catch (Exception e)
 			{
+				RaiseException(e);
 				Debug.WriteLine("Exception in PinterestService.getBoard(): " + e.Message);
 			}
 
 			return ret;
-		}		
+		}
 
 		/// <summary>
 		/// Deletes the pin with the specified ID
@@ -620,22 +670,25 @@ namespace PinSharp
 				{
 					AppID = _appID,
 					AppSecret = _appSecret,
-					Token = this._token,
+					Token = _token,
 					ObjectID = pinID
 				};
 
 				var request = _deletePinQuery.Invoke(args);
-				request.AddParameter("access_token", this._token);
+				request.AddParameter("access_token", _token);
 
 				var response = _oauth.Request(request);
 
 				SetResponse(response);
 
-				if (response.StatusCode == System.Net.HttpStatusCode.OK)
+				if (response.StatusCode == HttpStatusCode.OK)
 					ret = true;
+				else
+					throw new Exception("Received invalid response from Pinterest.  Status code: " + response.StatusCode + " Content: " + response.Content);
 			}
 			catch (Exception e)
 			{
+				RaiseException(e);
 				Debug.WriteLine("Exception in PinterestService.deletePin(): " + e.Message);
 			}
 
@@ -657,28 +710,37 @@ namespace PinSharp
 				{
 					AppID = _appID,
 					AppSecret = _appSecret,
-					Token = this._token,
+					Token = _token,
 					ObjectID = boardID
 				};
 
 				var request = _deleteBoardQuery.Invoke(args);
-				request.AddParameter("access_token", this._token);
+				request.AddParameter("access_token", _token);
 
 				var response = _oauth.Request(request);
 
 				SetResponse(response);
 
-				if (response.StatusCode == System.Net.HttpStatusCode.OK)
+				if (response.StatusCode == HttpStatusCode.OK)
 					ret = true;
+				else
+					throw new Exception("Received invalid response from Pinterest.  Status code: " + response.StatusCode + " Content: " + response.Content);
 			}
 			catch (Exception e)
 			{
+				RaiseException(e);
 				Debug.WriteLine("Exception in PinterestService.deleteBoard(): " + e.Message);
 			}
 
 			return ret;
 		}
 
+		/// <summary>
+		/// Creates a board with the specified name and description
+		/// </summary>
+		/// <param name="name">The name of the board to create</param>
+		/// <param name="description">The description of the board to create</param>
+		/// <returns>Board object</returns>
 		public Board createBoard(string name, string description)
 		{
 			Board ret = null;
@@ -689,11 +751,11 @@ namespace PinSharp
 				{
 					AppID = _appID,
 					AppSecret = _appSecret,
-					Token = this._token
+					Token = _token
 				};
 
 				var request = _createBoardQuery.Invoke(args);
-				request.AddParameter("access_token", this._token);
+				request.AddParameter("access_token", _token);
 				request.AddParameter("name", name);
 				request.AddParameter("description", description);
 
@@ -701,7 +763,7 @@ namespace PinSharp
 
 				SetResponse(response);
 
-				if (response.StatusCode == System.Net.HttpStatusCode.Created)
+				if (response.StatusCode == HttpStatusCode.Created)
 				{
 					var query = JSON.JsonDecode(response.Content);
 					if ((query != null) && (query is Hashtable))
@@ -710,88 +772,25 @@ namespace PinSharp
 						if (table.ContainsKey("data"))
 						{
 							Hashtable pinTable = (Hashtable)table["data"];
-							ret = this.boardFromHashTable(pinTable);
+							ret = boardFromHashTable(pinTable);
 						}
 					}
 				}
+				else
+					throw new Exception("Received invalid response from Pinterest.  Status code: " + response.StatusCode + " Content: " + response.Content);
 			}
 			catch (Exception e)
 			{
+				RaiseException(e);
 				Debug.WriteLine("Exception in PinterestService.createBoard(): " + e.Message);
 			}
 
 			return ret;
 		}
 
-        public Pin createPinUploadImage(string boardID, string note, string link, string fileName, string filePath)
-        {
-            Pin pin = null;
-
-            try
-            {
-                Board b = new Board()
-                {
-                    Id = boardID
-                };
-
-                pin = new Pin()
-                {
-                    Board = b,
-                    Note = note,
-                    Link = link
-                };
-
-                var args = new FunctionArguments
-                {
-                    AppID = _appID,
-                    AppSecret = _appSecret,
-                    Token = this._token
-                };
-
-                var request = _createPinQuery.Invoke(args);
-                request.AddParameter("access_token", this._token);
-                request.AddParameter("board", pin.Board.Id);
-                request.AddParameter("note", pin.Note);
-                request.AddParameter("link", pin.Link);
-                request.AddFile("image", fileName, filePath);
-
-                var response = _oauth.Request(request);
-
-                SetResponse(response);
-
-                if (response.StatusCode == System.Net.HttpStatusCode.Created)
-                {
-                    var query = JSON.JsonDecode(response.Content);
-                    if ((query != null) && (query is Hashtable))
-                    {
-                        Hashtable table = (Hashtable)query;
-                        if (table.ContainsKey("data"))
-                        {
-                            Hashtable pinTable = (Hashtable)table["data"];
-                            pin = this.pinFromHashTable(pinTable);
-                        }
-                        else
-                            pin = null;
-                    }
-                    else
-                        pin = null;
-                }
-                else
-                    pin = null;
-            }
-            catch (Exception e)
-            {
-                Debug.WriteLine("Exception in PinterestService.createPinBase64Image(): " + e.Message);
-                pin = null;
-            }
-
-            return pin;
-        }
-
-		public Pin createPin(string boardID, string note, string link, string imageURL)
+		public Pin createPinUploadImage(string boardID, string note, string link, string fileName, string filePath)
 		{
-			Pin pin = null;
-
+			Pin pin;
 			try
 			{
 				Board b = new Board()
@@ -803,28 +802,28 @@ namespace PinSharp
 				{
 					Board = b,
 					Note = note,
-					Link = link					
+					Link = link
 				};
 
 				var args = new FunctionArguments
 				{
 					AppID = _appID,
 					AppSecret = _appSecret,
-					Token = this._token
+					Token = _token
 				};
 
 				var request = _createPinQuery.Invoke(args);
-				request.AddParameter("access_token", this._token);
-				request.AddParameter("board", pin.Board.Id);
-				request.AddParameter("note", pin.Note);
-				request.AddParameter("link", pin.Link);
-				request.AddParameter("image_url", imageURL);
+				request.AddParameter("access_token", _token);
+				request.AddParameter("board_id", pin.Board.Id);
+				request.AddParameter("description", pin.Note);
+				request.AddParameter("source_url", pin.Link);
+				request.AddFile("image", fileName, filePath);
 
 				var response = _oauth.Request(request);
 
 				SetResponse(response);
 
-				if (response.StatusCode == System.Net.HttpStatusCode.Created)
+				if (response.StatusCode == HttpStatusCode.OK)
 				{
 					var query = JSON.JsonDecode(response.Content);
 					if ((query != null) && (query is Hashtable))
@@ -833,7 +832,7 @@ namespace PinSharp
 						if (table.ContainsKey("data"))
 						{
 							Hashtable pinTable = (Hashtable)table["data"];
-							pin = this.pinFromHashTable(pinTable);
+							pin = pinFromHashTable(pinTable);
 						}
 						else
 							pin = null;
@@ -842,10 +841,84 @@ namespace PinSharp
 						pin = null;
 				}
 				else
-					pin = null;
+					throw new Exception("Received invalid response from Pinterest.  Status code: " + response.StatusCode + " Content: " + response.Content);
 			}
 			catch (Exception e)
 			{
+				RaiseException(e);
+				Debug.WriteLine("Exception in PinterestService.createPinBase64Image(): " + e.Message);
+				pin = null;
+			}
+
+			return pin;
+		}
+
+		/// <summary>
+		/// Creates a Pinterest Pin
+		/// </summary>
+		/// <param name="boardID">The boad ID to use</param>
+		/// <param name="note">the caption value</param>
+		/// <param name="link">the link value</param>
+		/// <param name="imageURL">the URL to the image</param>
+		/// <returns>A Pin object</returns>
+		public Pin createPin(string boardID, string note, string link, string imageURL)
+		{
+			Pin pin;
+			try
+			{
+				Board b = new Board()
+				{
+					Id = boardID
+				};
+
+				pin = new Pin()
+				{
+					Board = b,
+					Note = note,
+					Link = link
+				};
+
+				var args = new FunctionArguments
+				{
+					AppID = _appID,
+					AppSecret = _appSecret,
+					Token = _token
+				};
+
+				var request = _createPinQuery.Invoke(args);
+				request.AddParameter("access_token", _token);
+				request.AddParameter("board_id", pin.Board.Id);
+				request.AddParameter("description", pin.Note);
+				request.AddParameter("source_url", pin.Link);
+				request.AddParameter("image_url", imageURL);
+
+				var response = _oauth.Request(request);
+
+				SetResponse(response);
+
+				if (response.StatusCode == HttpStatusCode.OK)
+				{
+					var query = JSON.JsonDecode(response.Content);
+					if ((query != null) && (query is Hashtable))
+					{
+						Hashtable table = (Hashtable)query;
+						if (table.ContainsKey("data"))
+						{
+							Hashtable pinTable = (Hashtable)table["data"];
+							pin = pinFromHashTable(pinTable);
+						}
+						else
+							pin = null;
+					}
+					else
+						pin = null;
+				}
+				else
+					throw new Exception("Received invalid response from Pinterest.  Status code: " + response.StatusCode + " Content: " + response.Content);
+			}
+			catch (Exception e)
+			{
+				RaiseException(e);
 				Debug.WriteLine("Exception in PinterestService.createPin(): " + e.Message);
 				pin = null;
 			}
@@ -855,7 +928,21 @@ namespace PinSharp
 		#endregion
 
 		#region Private Methods
-		private Board boardFromHashTable(Hashtable pinTable)
+		private void RaiseException(Exception e)
+		{
+			if (OnPinterestException != null)
+			{
+				PinterestException ex = new PinterestException(e.Message + "  Stack Trace: " + e.StackTrace);
+				OnPinterestException(ex);
+			}
+		}
+
+		private void RaiseMessage(string Message)
+		{
+			OnPinterestMessage?.Invoke(Message);
+		}
+
+		private Board boardFromHashTable(Hashtable boardTable)
 		{
 			Board board = null;
 
@@ -863,13 +950,14 @@ namespace PinSharp
 			{
 				board = new Board()
 				{
-					URL = pinTable["url"].ToString(),
-					Name = pinTable["name"].ToString(),
-					Id = pinTable["id"].ToString()
+					URL = boardTable["url"].ToString(),
+					Name = boardTable["name"].ToString(),
+					Id = boardTable["id"].ToString()
 				};
 			}
 			catch (Exception e)
 			{
+				RaiseException(e);
 				Debug.WriteLine("Exception in PinterestService.boardFromHashTable(): " + e.Message);
 			}
 
@@ -884,14 +972,15 @@ namespace PinSharp
 			{
 				pin = new Pin()
 				{
-					URL = pinTable["url"].ToString(),
+					URL = pinTable["link"].ToString(),
 					Link = pinTable["link"].ToString(),
 					Id = pinTable["id"].ToString(),
-					Note = pinTable["note"].ToString()
+					Note = pinTable["description"].ToString()
 				};
 			}
 			catch (Exception e)
 			{
+				RaiseException(e);
 				Debug.WriteLine("Exception in PinterestService.pinFromHashTable(): " + e.Message);
 			}
 

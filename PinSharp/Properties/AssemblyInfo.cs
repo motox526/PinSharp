@@ -9,7 +9,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("Chris Butterfield Software Solutions, LLC")]
 [assembly: AssemblyProduct("PinSharp")]
-[assembly: AssemblyCopyright("Copyright © Chris Butterfield Software Solutions, LLC 2016")]
+[assembly: AssemblyCopyright("Copyright © Chris Butterfield Software Solutions, LLC 2023")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 

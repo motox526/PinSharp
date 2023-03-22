@@ -1,8 +1,7 @@
 ﻿using System;
 using System.Drawing;
-using System.Linq;
 
-/*Copyright © 2016, Chris Butterfield Software Solutions, LLC
+/*Copyright © 2023, Chris Butterfield Software Solutions, LLC
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without

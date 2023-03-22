@@ -1,7 +1,4 @@
-﻿using System;
-using System.Linq;
-
-/*Copyright © 2016, Chris Butterfield Software Solutions, LLC
+﻿/*Copyright © 2023, Chris Butterfield Software Solutions, LLC
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -32,8 +29,10 @@ POSSIBILITY OF SUCH DAMAGE.
 
 namespace PinSharp
 {
-    public static class Globals
-    {
+	public static class Globals
+	{
+		public static string PinterestAuthorizationURL = "https://www.pinterest.com";
 		public static string PinterestBaseURL = "https://api.pinterest.com";
-    }
+		public static string PinterestAPIVersion = "v3";
+	}
 }

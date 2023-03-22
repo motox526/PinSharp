@@ -1,17 +1,17 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Globalization;
-using System.Text;
-using System.IO;
-using System.Security.Cryptography;
-using System.Drawing;
-using System.Net;
-using Newtonsoft.Json;
 using System.Diagnostics;
-using Newtonsoft.Json.Linq;
+using System.Drawing;
+using System.Globalization;
+using System.IO;
+using System.Net;
+using System.Security.Cryptography;
+using System.Text;
 
-/*Copyright © 2016, Chris Butterfield Software Solutions, LLC
+/*Copyright © 2023, Chris Butterfield Software Solutions, LLC
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -209,7 +209,6 @@ namespace PinSharp
 				{
 					fileStream.Close();
 					fileStream.Dispose();
-					fileStream = null;
 				}
 			}
 
@@ -292,8 +291,8 @@ namespace PinSharp
 				objStream.Dispose();
 				objStream = null;
 
-				if (!String.IsNullOrEmpty(response))
-					ret = JSON.JsonDecode(response);
+				if (!string.IsNullOrEmpty(response))
+					ret = JsonDecode(response);
 			}
 			catch (Exception e)
 			{
@@ -335,7 +334,7 @@ namespace PinSharp
 			try
 			{
 				HttpWebRequest httpWebRequest = (HttpWebRequest)WebRequest.Create(URL);
-				if (!String.IsNullOrEmpty(contentType))
+				if (!string.IsNullOrEmpty(contentType))
 					httpWebRequest.ContentType = contentType;
 				httpWebRequest.Method = Method.ToString();
 
@@ -356,8 +355,8 @@ namespace PinSharp
 					var responseText = streamReader.ReadToEnd();
 					//Now you have your response.
 					//or false depending on information in the response
-					if (!String.IsNullOrEmpty(responseText))
-						ret = JSON.JsonDecode(responseText);
+					if (!string.IsNullOrEmpty(responseText))
+						ret = JsonDecode(responseText);
 				}
 
 				httpResponse.Close();
@@ -383,12 +382,15 @@ namespace PinSharp
 					{
 						string value = headers[key];
 						HttpRequestHeader headerenumvalue;
-						if (Enum.TryParse<HttpRequestHeader>(key, true, out headerenumvalue))
+						if (Enum.TryParse(key, true, out headerenumvalue))
 						{
 							switch (headerenumvalue)
 							{
 								case HttpRequestHeader.Accept:
 									request.Accept = value;
+									break;
+								case HttpRequestHeader.ContentType:
+									request.ContentType = value;
 									break;
 								default:
 									request.Headers.Add(headerenumvalue, value);
@@ -464,14 +466,14 @@ namespace PinSharp
 			while (!done)
 			{
 				token = LookAhead(json, index);
-				if (token == JSON.TOKEN_NONE)
+				if (token == TOKEN_NONE)
 				{
 					success = false;
 					return null;
 				}
-				else if (token == JSON.TOKEN_COMMA)
+				else if (token == TOKEN_COMMA)
 					NextToken(json, ref index);
-				else if (token == JSON.TOKEN_CURLY_CLOSE)
+				else if (token == TOKEN_CURLY_CLOSE)
 				{
 					NextToken(json, ref index);
 					return table;
@@ -488,7 +490,7 @@ namespace PinSharp
 
 					// :
 					token = NextToken(json, ref index);
-					if (token != JSON.TOKEN_COLON)
+					if (token != TOKEN_COLON)
 					{
 						success = false;
 						return null;
@@ -520,14 +522,14 @@ namespace PinSharp
 			while (!done)
 			{
 				int token = LookAhead(json, index);
-				if (token == JSON.TOKEN_NONE)
+				if (token == TOKEN_NONE)
 				{
 					success = false;
 					return null;
 				}
-				else if (token == JSON.TOKEN_COMMA)
+				else if (token == TOKEN_COMMA)
 					NextToken(json, ref index);
-				else if (token == JSON.TOKEN_SQUARED_CLOSE)
+				else if (token == TOKEN_SQUARED_CLOSE)
 				{
 					NextToken(json, ref index);
 					break;
@@ -549,24 +551,24 @@ namespace PinSharp
 		{
 			switch (LookAhead(json, index))
 			{
-				case JSON.TOKEN_STRING:
+				case TOKEN_STRING:
 					return ParseString(json, ref index, ref success);
-				case JSON.TOKEN_NUMBER:
+				case TOKEN_NUMBER:
 					return ParseNumber(json, ref index, ref success);
-				case JSON.TOKEN_CURLY_OPEN:
+				case TOKEN_CURLY_OPEN:
 					return ParseObject(json, ref index, ref success);
-				case JSON.TOKEN_SQUARED_OPEN:
+				case TOKEN_SQUARED_OPEN:
 					return ParseArray(json, ref index, ref success);
-				case JSON.TOKEN_TRUE:
+				case TOKEN_TRUE:
 					NextToken(json, ref index);
 					return true;
-				case JSON.TOKEN_FALSE:
+				case TOKEN_FALSE:
 					NextToken(json, ref index);
 					return false;
-				case JSON.TOKEN_NULL:
+				case TOKEN_NULL:
 					NextToken(json, ref index);
 					return null;
-				case JSON.TOKEN_NONE:
+				case TOKEN_NONE:
 					break;
 			}
 
@@ -624,10 +626,10 @@ namespace PinSharp
 						{
 							// parse the 32 bit hex into an integer codepoint
 							uint codePoint;
-							if (!(success = UInt32.TryParse(new string(json, index, 4), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out codePoint)))
+							if (!(success = uint.TryParse(new string(json, index, 4), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out codePoint)))
 								return "";
 							// convert the integer codepoint to a unicode char and add to string
-							s.Append(Char.ConvertFromUtf32((int)codePoint));
+							s.Append(char.ConvertFromUtf32((int)codePoint));
 							// skip 4 chars
 							index += 4;
 						}
@@ -656,7 +658,7 @@ namespace PinSharp
 			int charLength = (lastIndex - index) + 1;
 
 			double number;
-			success = Double.TryParse(new string(json, index, charLength), NumberStyles.Any, CultureInfo.InvariantCulture, out number);
+			success = double.TryParse(new string(json, index, charLength), NumberStyles.Any, CultureInfo.InvariantCulture, out number);
 
 			index = lastIndex + 1;
 			return number;
@@ -694,24 +696,24 @@ namespace PinSharp
 			EatWhitespace(json, ref index);
 
 			if (index == json.Length)
-				return JSON.TOKEN_NONE;
+				return TOKEN_NONE;
 
 			char c = json[index];
 			index++;
 			switch (c)
 			{
 				case '{':
-					return JSON.TOKEN_CURLY_OPEN;
+					return TOKEN_CURLY_OPEN;
 				case '}':
-					return JSON.TOKEN_CURLY_CLOSE;
+					return TOKEN_CURLY_CLOSE;
 				case '[':
-					return JSON.TOKEN_SQUARED_OPEN;
+					return TOKEN_SQUARED_OPEN;
 				case ']':
-					return JSON.TOKEN_SQUARED_CLOSE;
+					return TOKEN_SQUARED_CLOSE;
 				case ',':
-					return JSON.TOKEN_COMMA;
+					return TOKEN_COMMA;
 				case '"':
-					return JSON.TOKEN_STRING;
+					return TOKEN_STRING;
 				case '0':
 				case '1':
 				case '2':
@@ -723,9 +725,9 @@ namespace PinSharp
 				case '8':
 				case '9':
 				case '-':
-					return JSON.TOKEN_NUMBER;
+					return TOKEN_NUMBER;
 				case ':':
-					return JSON.TOKEN_COLON;
+					return TOKEN_COLON;
 			}
 			index--;
 
@@ -741,7 +743,7 @@ namespace PinSharp
 					json[index + 4] == 'e')
 				{
 					index += 5;
-					return JSON.TOKEN_FALSE;
+					return TOKEN_FALSE;
 				}
 			}
 
@@ -754,7 +756,7 @@ namespace PinSharp
 					json[index + 3] == 'e')
 				{
 					index += 4;
-					return JSON.TOKEN_TRUE;
+					return TOKEN_TRUE;
 				}
 			}
 
@@ -767,11 +769,11 @@ namespace PinSharp
 					json[index + 3] == 'l')
 				{
 					index += 4;
-					return JSON.TOKEN_NULL;
+					return TOKEN_NULL;
 				}
 			}
 
-			return JSON.TOKEN_NONE;
+			return TOKEN_NONE;
 		}
 
 		/// <summary>
@@ -790,9 +792,9 @@ namespace PinSharp
 				success = SerializeObject((Hashtable)value, builder);
 			else if (value is ArrayList)
 				success = SerializeArray((ArrayList)value, builder);
-			else if ((value is Boolean) && ((Boolean)value == true))
+			else if ((value is bool) && ((bool)value == true))
 				builder.Append("true");
-			else if ((value is Boolean) && ((Boolean)value == false))
+			else if ((value is bool) && ((bool)value == false))
 				builder.Append("false");
 			else if (value is ValueType)
 			{
@@ -950,11 +952,11 @@ namespace PinSharp
 		static JsonWebToken()
 		{
 			HashAlgorithms = new Dictionary<JwtHashAlgorithm, Func<byte[], byte[], byte[]>>
-            {
-                { JwtHashAlgorithm.RS256, (key, value) => { using (var sha = new HMACSHA256(key)) { return sha.ComputeHash(value); } } },
-                { JwtHashAlgorithm.HS384, (key, value) => { using (var sha = new HMACSHA384(key)) { return sha.ComputeHash(value); } } },
-                { JwtHashAlgorithm.HS512, (key, value) => { using (var sha = new HMACSHA512(key)) { return sha.ComputeHash(value); } } }
-            };
+			{
+				{ JwtHashAlgorithm.RS256, (key, value) => { using (var sha = new HMACSHA256(key)) { return sha.ComputeHash(value); } } },
+				{ JwtHashAlgorithm.HS384, (key, value) => { using (var sha = new HMACSHA384(key)) { return sha.ComputeHash(value); } } },
+				{ JwtHashAlgorithm.HS512, (key, value) => { using (var sha = new HMACSHA512(key)) { return sha.ComputeHash(value); } } }
+			};
 		}
 
 		public static string Encode(object payload, string key, JwtHashAlgorithm algorithm)
@@ -1052,7 +1054,7 @@ namespace PinSharp
 				case 0: break; // No pad chars in this case
 				case 2: output += "=="; break; // Two pad chars
 				case 3: output += "="; break; // One pad char
-				default: throw new System.Exception("Illegal base64url string!");
+				default: throw new Exception("Illegal base64url string!");
 			}
 			var converted = Convert.FromBase64String(output); // Standard base64 decoder
 			return converted;

@@ -5,7 +5,7 @@ using System.Collections.Specialized;
 using System.Linq;
 using System.Net;
 
-/*Copyright © 2016, Chris Butterfield Software Solutions, LLC
+/*Copyright © 2023, Chris Butterfield Software Solutions, LLC
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -43,19 +43,19 @@ namespace PinSharp
 		private readonly Exception _exception;
 
 		internal PinterestResponse(RestResponseBase response, Exception exception = null)
-        {
-            _exception = exception;
-            _response = response;
-        }
+		{
+			_exception = exception;
+			_response = response;
+		}
 
 		private static bool IsStringANumber(IEnumerable<char> limit)
 		{
 			return limit.All(char.IsNumber);
 		}
 
-		public virtual TwitterError Error
+		public virtual PinterestError Error
 		{
-			get { return _response.ErrorContentEntity as TwitterError; }
+			get { return _response.ErrorContentEntity as PinterestError; }
 		}
 
 		public virtual NameValueCollection Headers
@@ -65,20 +65,20 @@ namespace PinSharp
 
 		public virtual HttpStatusCode StatusCode
 		{
-			get { return _response.StatusCode; }
-			set { _response.StatusCode = value; }
+			get => _response.StatusCode;
+			set => _response.StatusCode = value;
 		}
 
 		public virtual bool SkippedDueToRateLimitingRule
 		{
-			get { return _response.SkippedDueToRateLimitingRule; }
-			set { _response.SkippedDueToRateLimitingRule = value; }
+			get => _response.SkippedDueToRateLimitingRule;
+			set => _response.SkippedDueToRateLimitingRule = value;
 		}
 
 		public virtual string StatusDescription
 		{
-			get { return _response.StatusDescription; }
-			set { _response.StatusDescription = value; }
+			get => _response.StatusDescription;
+			set => _response.StatusDescription = value;
 		}
 
 		public virtual string Response
@@ -88,26 +88,26 @@ namespace PinSharp
 
 		public virtual string RequestMethod
 		{
-			get { return _response.RequestMethod; }
-			set { _response.RequestMethod = value; }
+			get => _response.RequestMethod;
+			set => _response.RequestMethod = value;
 		}
 
 		public virtual Uri RequestUri
 		{
-			get { return _response.RequestUri; }
-			set { _response.RequestUri = value; }
+			get => _response.RequestUri;
+			set => _response.RequestUri = value;
 		}
 
 		public virtual DateTime? ResponseDate
 		{
-			get { return _response.ResponseDate; }
-			set { _response.ResponseDate = value; }
+			get => _response.ResponseDate;
+			set => _response.ResponseDate = value;
 		}
 
 		public virtual DateTime? RequestDate
 		{
-			get { return _response.RequestDate; }
-			set { _response.RequestDate = value; }
+			get => _response.RequestDate;
+			set => _response.RequestDate = value;
 		}
 
 		public virtual Exception InnerException

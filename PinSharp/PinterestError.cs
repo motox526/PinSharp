@@ -1,9 +1,8 @@
 ﻿using System;
 using System.Diagnostics;
-using System.Linq;
 using System.Runtime.Serialization;
 
-/*Copyright © 2016, Chris Butterfield Software Solutions, LLC
+/*Copyright © 2023, Chris Butterfield Software Solutions, LLC
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -37,7 +36,7 @@ namespace PinSharp
 	[Serializable]
 	[DataContract]
 	[DebuggerDisplay("{Code}: {Message}")]
-	public class TwitterError : IPinterestModel
+	public class PinterestError : IPinterestModel
 	{
 		[DataMember]
 		public virtual int Code { get; set; }
